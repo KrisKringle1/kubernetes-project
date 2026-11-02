@@ -1,0 +1,69 @@
+# ============================================================================
+# Stage 3B: Web App Deployment (3 Replicas + Spring Actuator Health Probes)
+# ============================================================================
+# This file is 99% identical to what a production Spring Boot Deployment looks
+# like at work! Only `image:` changes from our Python image to your Java image.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-lab-app
+  labels:
+    app: k8s-lab-app
+spec:
+  # DESIRED STATE: Tell Kubernetes to keep 3 identical Pods running at all times!
+  replicas: 3
+
+  # SELECTOR: How the Deployment knows which Pods belong to it
+  selector:
+    matchLabels:
+      app: k8s-lab-app
+
+  # POD TEMPLATE: The blueprint for creating each Pod
+  template:
+    metadata:
+      labels:
+        app: k8s-lab-app
+    spec:
+      containers:
+        - name: web-app
+          image: k8s-lab-app:1.0
+          # IMPORTANT FOR LOCAL K8S: Use the image we built locally with `docker build`
+          # instead of trying to download it from Docker Hub on the internet.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+
+          # Environment Variables (same as Spring Boot application.yml overrides)
+          env:
+            - name: APP_ENV
+              value: "stage3-kubernetes"
+            - name: APP_VERSION
+              value: "2.0.0"
+            - name: REDIS_HOST
+              value: "redis-cache"
+            - name: SPRING_DATA_REDIS_HOST
+              value: "redis-cache"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+
+          # LIVENESS PROBE: "Is this container frozen/deadlocked?"
+          # If this fails 3 times, Kubernetes kills and restarts the container.
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+          # READINESS PROBE: "Can this Pod talk to Redis and serve traffic?"
+          # If this returns 503, Kubernetes removes this Pod from the Service
+          # load balancer until it returns 200 again!
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
