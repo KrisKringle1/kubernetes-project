@@ -24,11 +24,17 @@ services:
                                      # to the IP address of the `redis-cache` service below!
       - REDIS_PORT=6379
     depends_on:
-      - redis-cache                  # Start the redis-cache container before web-app
+      redis-cache:
+        condition: service_healthy   # Wait for Redis to pass healthcheck before web-app starts
 
   # Service 2: Official Redis In-Memory Database Container
   redis-cache:
     image: redis:7-alpine            # Pull the official lightweight Redis image from Docker Hub
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     # Notice: No `ports:` needed here! Why? Because `web-app` talks to `redis-cache`
     # over Docker Compose's private internal network on port 6379 without exposing
     # Redis to the outside world.
