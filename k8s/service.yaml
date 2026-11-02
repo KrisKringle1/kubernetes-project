@@ -1,0 +1,24 @@
+# ============================================================================
+# Stage 3C: Kubernetes Service (The Load Balancer in Front of Our 3 Pods)
+# ============================================================================
+# Why do we need a Service?
+# Each of our 3 Pods gets its own random internal IP address, and if a Pod dies,
+# its replacement gets a brand-new IP!
+#
+# A `Service` sits in front of all Pods matching `app: k8s-lab-app`, gives them
+# ONE stable entry point, and load-balances requests across all healthy Pods.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-lab-app-service
+spec:
+  # LoadBalancer exposes the Service on your Mac's `localhost:8080` in Docker Desktop!
+  type: LoadBalancer
+  selector:
+    app: k8s-lab-app     # <-- Finds all 3 Pods with label `app: k8s-lab-app`
+                         #     (ONLY sends traffic to Pods passing readinessProbe!)
+  ports:
+    - protocol: TCP
+      port: 8080         # External port (http://localhost:8080)
+      targetPort: 8080   # Container port inside each Pod

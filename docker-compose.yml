@@ -1,0 +1,34 @@
+# ============================================================================
+# Stage 2: Multi-Container Application with Docker Compose
+# ============================================================================
+# Instead of running long `docker run` commands for every container and manually
+# creating virtual networks, Docker Compose lets us declare our entire stack
+# (Web App + Redis Database) in one YAML file.
+#
+# Spring Boot Equivalent at Work:
+# Teams put a `docker-compose.yml` in the root of a Spring Boot repo to spin up
+# Postgres, Kafka, and Redis locally so developers can run the app on their laptop.
+
+services:
+  # Service 1: Our Python Web App
+  web-app:
+    build: .                         # Build the Dockerfile in the current directory
+    image: k8s-lab-app:1.0           # Tag the built image
+    ports:
+      - "8080:8080"                  # Map Mac port 8080 -> Container port 8080
+    environment:
+      - APP_ENV=stage2-docker-compose
+      - APP_VERSION=1.0.0
+      - REDIS_HOST=redis-cache       # MAGIC: Docker Compose creates an internal DNS!
+                                     # The hostname "redis-cache" automatically resolves
+                                     # to the IP address of the `redis-cache` service below!
+      - REDIS_PORT=6379
+    depends_on:
+      - redis-cache                  # Start the redis-cache container before web-app
+
+  # Service 2: Official Redis In-Memory Database Container
+  redis-cache:
+    image: redis:7-alpine            # Pull the official lightweight Redis image from Docker Hub
+    # Notice: No `ports:` needed here! Why? Because `web-app` talks to `redis-cache`
+    # over Docker Compose's private internal network on port 6379 without exposing
+    # Redis to the outside world.

@@ -1,0 +1,42 @@
+# ============================================================================
+# Stage 3A: Redis Deployment & Internal Service in Kubernetes
+# ============================================================================
+# In Docker Compose, we wrote 3 lines for `redis-cache`.
+# In Kubernetes, we explicitly separate:
+#   1. Deployment (manages the running Redis Pod)
+#   2. Service    (gives the Redis Pod a stable internal DNS name: `redis-cache`)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-cache
+  labels:
+    app: redis-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-cache
+  template:
+    metadata:
+      labels:
+        app: redis-cache
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+---
+# The `---` separator lets us put multiple Kubernetes resources in one YAML file!
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cache   # <-- MAGIC: Creates internal K8s DNS name "redis-cache"!
+spec:
+  type: ClusterIP     # ClusterIP (default) = Private inside the cluster only!
+  selector:
+    app: redis-cache  # Routes traffic to any Pod with label `app: redis-cache`
+  ports:
+    - port: 6379
+      targetPort: 6379
